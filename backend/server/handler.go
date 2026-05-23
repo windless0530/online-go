@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"online-go/game"
@@ -26,8 +27,9 @@ func (h *Handler) getState(w http.ResponseWriter, _ *http.Request) {
 }
 
 type moveRequest struct {
-	X int `json:"x"`
-	Y int `json:"y"`
+	X     int    `json:"x"`
+	Y     int    `json:"y"`
+	Color string `json:"color"` // "black" or "white"
 }
 
 type moveResponse struct {
@@ -42,7 +44,13 @@ func (h *Handler) postMove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state, err := h.game.PlaceStone(req.X, req.Y)
+	player, err := parseColor(req.Color)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, moveResponse{Error: err.Error()})
+		return
+	}
+
+	state, err := h.game.PlaceStone(req.X, req.Y, player)
 	if err != nil {
 		writeJSON(w, http.StatusOK, moveResponse{Error: err.Error()})
 		return
@@ -53,6 +61,17 @@ func (h *Handler) postMove(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) postReset(w http.ResponseWriter, _ *http.Request) {
 	state := h.game.Reset()
 	writeJSON(w, http.StatusOK, state)
+}
+
+func parseColor(s string) (game.Stone, error) {
+	switch s {
+	case "black":
+		return game.Black, nil
+	case "white":
+		return game.White, nil
+	default:
+		return game.Empty, fmt.Errorf("无效颜色: %q，需传 \"black\" 或 \"white\"", s)
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

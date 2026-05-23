@@ -19,7 +19,6 @@ body {
   align-items: center;
   padding: 48px 24px 72px;
   gap: 30px;
-  /* Fixed width so the board's width:100% never changes when chip text or border changes */
   width: 100%;
 }
 
@@ -30,37 +29,81 @@ body {
   color: #2c2c2c;
 }
 
-.status-bar {
+/* ── bottom bar ──────────────────────────────── */
+
+.bottom-bar {
   display: flex;
   align-items: center;
-  gap: 27px;
+  gap: 100px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.player-chip {
-  padding: 6px 24px;
-  border-radius: 24px;
-  font-weight: 600;
-  font-size: 21px;
-  letter-spacing: 1px;
-  /* Always reserve border space so switching chips never changes the element's width */
-  border: 1px solid transparent;
+/* Segmented control */
+.mode-selector {
+  display: flex;
+  background: #d0d0d0;
+  border-radius: 10px;
+  padding: 4px;
+  gap: 3px;
 }
 
-.player-chip--black {
-  background: #181818;
+.mode-option {
+  display: block;
+  padding: 7px 22px;
+  border-radius: 7px;
+  font-size: 20px;
+  cursor: pointer;
+  color: #555;
+  transition: background 0.14s, color 0.14s, box-shadow 0.14s;
+  -webkit-user-select: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Hide the native radio */
+.mode-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.mode-option--active {
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+/* Tint active black/white options */
+.mode-option--black.mode-option--active {
+  background: #1e1e1e;
   color: #f0f0f0;
 }
 
-.player-chip--white {
+.mode-option--white.mode-option--active {
   background: #f8f8f8;
-  color: #333;
-  border-color: #ccc;
+  color: #222;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+}
+
+.mode-option:hover:not(.mode-option--active) {
+  color: #222;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Capture counts */
+.capture-bar {
+  display: flex;
+  gap: 24px;
 }
 
 .capture-info {
   font-size: 20px;
   color: #666;
 }
+
+/* ── error / reset ───────────────────────────── */
 
 .error-banner {
   background: #fde8e6;

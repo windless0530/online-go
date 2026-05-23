@@ -1,4 +1,4 @@
-import type { GameState, MoveResponse } from "./types";
+import type { GameState, MoveResponse, Player } from "./types";
 
 const BASE = "/api";
 
@@ -8,11 +8,11 @@ export async function getState(): Promise<GameState> {
   return res.json() as Promise<GameState>;
 }
 
-export async function makeMove(x: number, y: number): Promise<MoveResponse> {
+export async function makeMove(x: number, y: number, color: Player): Promise<MoveResponse> {
   const res = await fetch(`${BASE}/move`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ x, y }),
+    body: JSON.stringify({ x, y, color }),
   });
   if (!res.ok) throw new Error(`POST /api/move failed: ${res.status}`);
   return res.json() as Promise<MoveResponse>;

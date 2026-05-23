@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Board } from "./Board";
 import { getState, makeMove, resetGame } from "./api";
-import type { GameState, Stone } from "./types";
+import type { GameState, Stone, Player, PlaceMode } from "./types";
 import "./App.css";
 
 const BOARD_SIZE = 19;
@@ -9,22 +9,31 @@ const BOARD_SIZE = 19;
 function emptyState(): GameState {
   return {
     board: Array.from({ length: BOARD_SIZE }, () => Array<0>(BOARD_SIZE).fill(0)),
-    currentPlayer: "black",
     blackCaptures: 0,
     whiteCaptures: 0,
   };
 }
 
+const MODE_LABELS: Record<PlaceMode, string> = {
+  black: "摆黑子",
+  white: "摆白子",
+  alternate: "交替落子",
+};
+
 export function App() {
   const [state, setState] = useState<GameState>(emptyState);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [placeMode, setPlaceMode] = useState<PlaceMode>("alternate");
+  const [currentTurn, setCurrentTurn] = useState<Player>("black");
 
-  // Use a ref instead of state so pending-move tracking never triggers a re-render.
   const pendingRef = useRef(false);
-  // Keep a ref to the latest state so the stable handleMove callback can read it.
   const stateRef = useRef(state);
+  const turnRef = useRef(currentTurn);
+  const modeRef = useRef(placeMode);
   stateRef.current = state;
+  turnRef.current = currentTurn;
+  modeRef.current = placeMode;
 
   useEffect(() => {
     getState()
@@ -33,44 +42,55 @@ export function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Empty dep array → stable reference; reads live state via stateRef.
+  const activeColor = (mode: PlaceMode, turn: Player): Player =>
+    mode === "alternate" ? turn : mode;
+
   const handleMove = useCallback(async (x: number, y: number) => {
     if (pendingRef.current) return;
     pendingRef.current = true;
     setError(null);
 
     const snapshot = stateRef.current;
-    const stone: Stone = snapshot.currentPlayer === "black" ? 1 : 2;
-    const nextPlayer = snapshot.currentPlayer === "black" ? "white" : "black";
+    const mode = modeRef.current;
+    const turn = turnRef.current;
+    const color = activeColor(mode, turn);
+    const stone: Stone = color === "black" ? 1 : 2;
 
-    // Optimistic update: stone appears immediately without waiting for the API.
+    // Optimistic update
     setState(prev => ({
       ...prev,
       board: prev.board.map((col, ci) =>
         col.map((s, ri) => (ci === x && ri === y ? stone : s))
       ),
-      currentPlayer: nextPlayer,
     }));
 
+    // Flip turn for alternate mode immediately so hover preview updates
+    if (mode === "alternate") {
+      setCurrentTurn(t => (t === "black" ? "white" : "black"));
+    }
+
     try {
-      const res = await makeMove(x, y);
+      const res = await makeMove(x, y, color);
       if (res.error) {
-        setState(snapshot); // revert to pre-move state
+        setState(snapshot);
+        if (mode === "alternate") setCurrentTurn(color); // revert turn flip
         setError(res.error);
       } else if (res.state) {
-        setState(res.state); // apply authoritative state (handles captures)
+        setState(res.state);
       }
     } catch {
       setState(snapshot);
+      if (mode === "alternate") setCurrentTurn(color);
       setError("落子失败，请重试");
     } finally {
       pendingRef.current = false;
     }
-  }, []); // stable — no deps needed because we read state via ref
+  }, []);
 
   const handleReset = useCallback(async () => {
     setError(null);
     setLoading(true);
+    setCurrentTurn("black");
     try {
       const s = await resetGame();
       setState(s);
@@ -81,14 +101,13 @@ export function App() {
     }
   }, []);
 
+  const hoverColor = activeColor(placeMode, currentTurn);
+
   return (
     <div className="app">
       <h1 className="app-title">围棋</h1>
 
-      <div className="status-bar">
-        <span className={`player-chip player-chip--${state.currentPlayer}`}>
-          {state.currentPlayer === "black" ? "黑方" : "白方"}落子
-        </span>
+      <div className="capture-bar">
         <span className="capture-info">黑提 {state.blackCaptures} 子</span>
         <span className="capture-info">白提 {state.whiteCaptures} 子</span>
       </div>
@@ -97,14 +116,34 @@ export function App() {
 
       <Board
         board={state.board}
-        currentPlayer={state.currentPlayer}
+        currentPlayer={hoverColor}
         onMove={handleMove}
         disabled={loading}
       />
 
-      <button className="reset-btn" onClick={handleReset} disabled={loading}>
-        重新开始
-      </button>
+      <div className="bottom-bar">
+        <div className="mode-selector" role="group" aria-label="落子模式">
+          {(["black", "white", "alternate"] as PlaceMode[]).map(mode => (
+            <label
+              key={mode}
+              className={`mode-option mode-option--${mode}${placeMode === mode ? " mode-option--active" : ""}`}
+            >
+              <input
+                type="radio"
+                name="placeMode"
+                value={mode}
+                checked={placeMode === mode}
+                onChange={() => setPlaceMode(mode)}
+              />
+              {MODE_LABELS[mode]}
+            </label>
+          ))}
+        </div>
+
+        <button type="button" className="reset-btn" onClick={handleReset} disabled={loading}>
+          重新开始
+        </button>
+      </div>
     </div>
   );
 }

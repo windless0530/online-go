@@ -4,7 +4,6 @@ import "sync"
 
 type GameState struct {
 	Board         [][]Stone `json:"board"`
-	CurrentPlayer string    `json:"currentPlayer"`
 	BlackCaptures int       `json:"blackCaptures"`
 	WhiteCaptures int       `json:"whiteCaptures"`
 }
@@ -12,16 +11,12 @@ type GameState struct {
 type Game struct {
 	mu            sync.Mutex
 	board         *Board
-	currentPlayer Stone
 	blackCaptures int
 	whiteCaptures int
 }
 
 func NewGame() *Game {
-	return &Game{
-		board:         NewBoard(),
-		currentPlayer: Black,
-	}
+	return &Game{board: NewBoard()}
 }
 
 func (g *Game) State() GameState {
@@ -30,21 +25,20 @@ func (g *Game) State() GameState {
 	return g.snapshot()
 }
 
-func (g *Game) PlaceStone(x, y int) (GameState, error) {
+// PlaceStone places a stone of the given color. Turn management is the caller's responsibility.
+func (g *Game) PlaceStone(x, y int, player Stone) (GameState, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	captured, err := g.board.PlaceStone(x, y, g.currentPlayer)
+	captured, err := g.board.PlaceStone(x, y, player)
 	if err != nil {
 		return GameState{}, err
 	}
 
-	if g.currentPlayer == Black {
+	if player == Black {
 		g.blackCaptures += captured
-		g.currentPlayer = White
 	} else {
 		g.whiteCaptures += captured
-		g.currentPlayer = Black
 	}
 
 	return g.snapshot(), nil
@@ -54,7 +48,6 @@ func (g *Game) Reset() GameState {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.board = NewBoard()
-	g.currentPlayer = Black
 	g.blackCaptures = 0
 	g.whiteCaptures = 0
 	return g.snapshot()
@@ -63,15 +56,7 @@ func (g *Game) Reset() GameState {
 func (g *Game) snapshot() GameState {
 	return GameState{
 		Board:         g.board.ToSlice(),
-		CurrentPlayer: stoneToPlayer(g.currentPlayer),
 		BlackCaptures: g.blackCaptures,
 		WhiteCaptures: g.whiteCaptures,
 	}
-}
-
-func stoneToPlayer(s Stone) string {
-	if s == Black {
-		return "black"
-	}
-	return "white"
 }

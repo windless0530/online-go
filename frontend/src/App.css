@@ -17,30 +17,33 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 16px 48px;
-  gap: 20px;
+  padding: 48px 24px 72px;
+  gap: 30px;
+  /* Fixed width so the board's width:100% never changes when chip text or border changes */
+  width: 100%;
 }
 
 .app-title {
-  font-size: 26px;
+  font-size: 39px;
   font-weight: 600;
-  letter-spacing: 6px;
+  letter-spacing: 8px;
   color: #2c2c2c;
 }
 
 .status-bar {
   display: flex;
   align-items: center;
-  gap: 18px;
-  font-size: 14px;
+  gap: 27px;
 }
 
 .player-chip {
-  padding: 4px 16px;
-  border-radius: 20px;
+  padding: 6px 24px;
+  border-radius: 24px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 21px;
   letter-spacing: 1px;
+  /* Always reserve border space so switching chips never changes the element's width */
+  border: 1px solid transparent;
 }
 
 .player-chip--black {
@@ -51,11 +54,11 @@ body {
 .player-chip--white {
   background: #f8f8f8;
   color: #333;
-  border: 1px solid #ccc;
+  border-color: #ccc;
 }
 
 .capture-info {
-  font-size: 13px;
+  font-size: 20px;
   color: #666;
 }
 
@@ -63,20 +66,20 @@ body {
   background: #fde8e6;
   color: #b02a20;
   border: 1px solid #f5c6c2;
-  padding: 6px 16px;
+  padding: 9px 24px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 19px;
 }
 
 .reset-btn {
-  padding: 8px 32px;
-  font-size: 14px;
+  padding: 12px 48px;
+  font-size: 21px;
   border: 1px solid #bbb;
   border-radius: 4px;
   background: #f4f4f4;
   color: #333;
   cursor: pointer;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   transition: background 0.15s, border-color 0.15s;
 }
 

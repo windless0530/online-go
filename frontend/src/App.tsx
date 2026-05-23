@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Board } from "./Board";
 import { getState, makeMove, resetGame } from "./api";
-import type { GameState } from "./types";
+import type { GameState, Stone } from "./types";
 import "./App.css";
 
 const BOARD_SIZE = 19;
@@ -19,7 +19,12 @@ export function App() {
   const [state, setState] = useState<GameState>(emptyState);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [moving, setMoving] = useState(false);
+
+  // Use a ref instead of state so pending-move tracking never triggers a re-render.
+  const pendingRef = useRef(false);
+  // Keep a ref to the latest state so the stable handleMove callback can read it.
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
     getState()
@@ -28,26 +33,40 @@ export function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleMove = useCallback(
-    async (x: number, y: number) => {
-      if (moving) return;
-      setMoving(true);
-      setError(null);
-      try {
-        const res = await makeMove(x, y);
-        if (res.error) {
-          setError(res.error);
-        } else if (res.state) {
-          setState(res.state);
-        }
-      } catch {
-        setError("落子失败，请重试");
-      } finally {
-        setMoving(false);
+  // Empty dep array → stable reference; reads live state via stateRef.
+  const handleMove = useCallback(async (x: number, y: number) => {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
+    setError(null);
+
+    const snapshot = stateRef.current;
+    const stone: Stone = snapshot.currentPlayer === "black" ? 1 : 2;
+    const nextPlayer = snapshot.currentPlayer === "black" ? "white" : "black";
+
+    // Optimistic update: stone appears immediately without waiting for the API.
+    setState(prev => ({
+      ...prev,
+      board: prev.board.map((col, ci) =>
+        col.map((s, ri) => (ci === x && ri === y ? stone : s))
+      ),
+      currentPlayer: nextPlayer,
+    }));
+
+    try {
+      const res = await makeMove(x, y);
+      if (res.error) {
+        setState(snapshot); // revert to pre-move state
+        setError(res.error);
+      } else if (res.state) {
+        setState(res.state); // apply authoritative state (handles captures)
       }
-    },
-    [moving]
-  );
+    } catch {
+      setState(snapshot);
+      setError("落子失败，请重试");
+    } finally {
+      pendingRef.current = false;
+    }
+  }, []); // stable — no deps needed because we read state via ref
 
   const handleReset = useCallback(async () => {
     setError(null);
@@ -68,8 +87,7 @@ export function App() {
 
       <div className="status-bar">
         <span className={`player-chip player-chip--${state.currentPlayer}`}>
-          {state.currentPlayer === "black" ? "黑方" : "白方"}
-          {moving ? " ..." : " 落子"}
+          {state.currentPlayer === "black" ? "黑方" : "白方"}落子
         </span>
         <span className="capture-info">黑提 {state.blackCaptures} 子</span>
         <span className="capture-info">白提 {state.whiteCaptures} 子</span>
@@ -81,10 +99,10 @@ export function App() {
         board={state.board}
         currentPlayer={state.currentPlayer}
         onMove={handleMove}
-        disabled={loading || moving}
+        disabled={loading}
       />
 
-      <button className="reset-btn" onClick={handleReset} disabled={loading || moving}>
+      <button className="reset-btn" onClick={handleReset} disabled={loading}>
         重新开始
       </button>
     </div>

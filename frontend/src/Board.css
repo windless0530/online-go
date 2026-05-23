@@ -1,34 +1,34 @@
 .board {
   width: 100%;
-  max-width: 640px;
+  max-width: min(1008px, calc(100vw - 32px));
   cursor: crosshair;
-  border-radius: 3px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.board--disabled {
-  cursor: not-allowed;
+  border-radius: 4px;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.38), 0 2px 8px rgba(0, 0, 0, 0.18);
+  /* Promote the board to its own compositing layer so stone repaints don't affect the page */
+  will-change: transform;
 }
 
 .board-bg {
-  fill: #c8a660;
+  /* Lighter wood tone */
+  fill: #e2cc88;
 }
 
 .grid-line {
-  stroke: #7a5820;
-  stroke-width: 0.75;
+  stroke: #8a6420;
+  stroke-width: 1;
 }
 
 .star-point {
-  fill: #7a5820;
+  fill: #8a6420;
 }
 
 .stone {
-  transition: none;
+  /* CSS drop-shadow is GPU-composited; SVG <filter> is not */
+  filter: drop-shadow(1px 2px 3px rgba(0, 0, 0, 0.42));
 }
 
 .hover-stone {
-  opacity: 0.5;
+  opacity: 0.48;
 }
 
 .hover-stone--black {
@@ -36,7 +36,7 @@
 }
 
 .hover-stone--white {
-  fill: #f0f0f0;
+  fill: #f4f4f4;
   stroke: #aaaaaa;
-  stroke-width: 0.6;
+  stroke-width: 0.8;
 }

@@ -3,17 +3,19 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"online-go/game"
 )
 
 type Handler struct {
-	game *game.Game
+	game        *game.Game
+	persistPath string
 }
 
-func New(g *game.Game) *Handler {
-	return &Handler{game: g}
+func New(g *game.Game, persistPath string) *Handler {
+	return &Handler{game: g, persistPath: persistPath}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
@@ -55,12 +57,26 @@ func (h *Handler) postMove(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, moveResponse{Error: err.Error()})
 		return
 	}
+	h.persist(state)
 	writeJSON(w, http.StatusOK, moveResponse{State: &state})
 }
 
 func (h *Handler) postReset(w http.ResponseWriter, _ *http.Request) {
 	state := h.game.Reset()
+	h.persist(state)
 	writeJSON(w, http.StatusOK, state)
+}
+
+// persist saves the snapshot synchronously. A failure is logged but does not
+// fail the request — the user's move already succeeded in memory, and the next
+// successful save will overwrite the lost one.
+func (h *Handler) persist(s game.GameState) {
+	if h.persistPath == "" {
+		return
+	}
+	if err := game.SaveState(h.persistPath, s); err != nil {
+		log.Printf("persist state failed: %v", err)
+	}
 }
 
 func parseColor(s string) (game.Stone, error) {

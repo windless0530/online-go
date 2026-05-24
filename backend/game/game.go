@@ -19,6 +19,22 @@ func NewGame() *Game {
 	return &Game{board: NewBoard()}
 }
 
+// NewGameFromState reconstructs a Game from a persisted snapshot.
+// The caller is responsible for validating the state first (see LoadState).
+func NewGameFromState(s GameState) *Game {
+	b := NewBoard()
+	for x := 0; x < BoardSize; x++ {
+		for y := 0; y < BoardSize; y++ {
+			b.Set(x, y, s.Board[x][y])
+		}
+	}
+	return &Game{
+		board:         b,
+		blackCaptures: s.BlackCaptures,
+		whiteCaptures: s.WhiteCaptures,
+	}
+}
+
 func (g *Game) State() GameState {
 	g.mu.Lock()
 	defer g.mu.Unlock()
